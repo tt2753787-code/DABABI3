@@ -1,0 +1,6 @@
+{
+  "name": "DABABI3 - دبابيع | منصة التوريد المباشر بالمغرب",
+  "description": "سوق مباشر يربط بين المورد والزبون في المغرب عبر واتساب بضغطة زر واحدة بدون تعقيدات وعمولة 0%",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
