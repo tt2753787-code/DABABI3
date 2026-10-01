@@ -1,13 +1,62 @@
 import { Category, Product } from '../types';
 
 export const CATEGORIES: Category[] = [
-  { id: 'all', label: 'الكل' },
-  { id: 'electronics', label: 'أجهزة وإلكترونيات' },
-  { id: 'fashion', label: 'ملابس وأزياء' },
-  { id: 'food', label: 'مواد غذائية' },
-  { id: 'wholesale', label: 'سلع بالجملة' },
-  { id: 'crafts', label: 'صناعة تقليدية وجلد' },
-  { id: 'decor', label: 'زرابي وديكور مغربي' },
+  {
+    id: 'all',
+    label: 'الكل',
+    badgeBg: 'bg-slate-100',
+    badgeText: 'text-slate-800',
+    borderClass: 'border-slate-300',
+    activeBg: 'bg-gradient-to-r from-slate-900 to-slate-800 text-white',
+  },
+  {
+    id: 'electronics',
+    label: 'أجهزة وإلكترونيات',
+    badgeBg: 'bg-indigo-50',
+    badgeText: 'text-indigo-700',
+    borderClass: 'border-indigo-200',
+    activeBg: 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white',
+  },
+  {
+    id: 'fashion',
+    label: 'ملابس وأزياء',
+    badgeBg: 'bg-rose-50',
+    badgeText: 'text-rose-700',
+    borderClass: 'border-rose-200',
+    activeBg: 'bg-gradient-to-r from-rose-500 to-pink-600 text-white',
+  },
+  {
+    id: 'food',
+    label: 'مواد غذائية',
+    badgeBg: 'bg-amber-50',
+    badgeText: 'text-amber-800',
+    borderClass: 'border-amber-200',
+    activeBg: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white',
+  },
+  {
+    id: 'wholesale',
+    label: 'سلع بالجملة',
+    badgeBg: 'bg-purple-50',
+    badgeText: 'text-purple-700',
+    borderClass: 'border-purple-200',
+    activeBg: 'bg-gradient-to-r from-purple-600 to-violet-700 text-white',
+  },
+  {
+    id: 'crafts',
+    label: 'صناعة تقليدية وجلد',
+    badgeBg: 'bg-orange-50',
+    badgeText: 'text-orange-800',
+    borderClass: 'border-orange-200',
+    activeBg: 'bg-gradient-to-r from-orange-600 to-amber-600 text-white',
+  },
+  {
+    id: 'decor',
+    label: 'زرابي وديكور',
+    badgeBg: 'bg-teal-50',
+    badgeText: 'text-teal-800',
+    borderClass: 'border-teal-200',
+    activeBg: 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white',
+  },
 ];
 
 export const MOROCCAN_CITIES = [

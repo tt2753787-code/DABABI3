@@ -3,37 +3,42 @@
 @layer base {
   :root {
     --primary: #00422b;
-    --secondary: #006c46;
-    --accent: #00a86b;
+    --accent-emerald: #00a86b;
+    --accent-amber: #f59e0b;
+    --accent-violet: #6366f1;
+    --accent-rose: #f43f5e;
+    --accent-cyan: #06b6d4;
   }
   
   html, body {
     margin: 0;
     padding: 0;
-    font-family: 'Cairo', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Alexandria', 'Outfit', 'Tajawal', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
 .font-display {
-  font-family: 'Space Grotesk', 'Cairo', sans-serif;
+  font-family: 'Space Grotesk', 'Alexandria', 'Outfit', sans-serif;
 }
 
-.font-arabic {
-  font-family: 'Cairo', sans-serif;
+.font-fluid {
+  font-family: 'Alexandria', 'Tajawal', sans-serif;
 }
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #94a3b8;
 }
+

@@ -1,6 +1,5 @@
 /**
- * DABABI3 - دبابيع
- * منصة التوريد المباشر بالمغرب
+ * DABABI3
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,8 +12,22 @@ import { SupplierAddView } from './components/SupplierAddView';
 import { AboutView } from './components/AboutView';
 import { ProductModal } from './components/ProductModal';
 import { FavoritesModal } from './components/FavoritesModal';
+import { AuthScreen, UserSession } from './components/AuthScreen';
 
 export default function App() {
+  // Authentication session - Login page shown first before entering
+  const [userSession, setUserSession] = useState<UserSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('dababi3_session');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
   const [currentView, setCurrentView] = useState<ViewMode>('browse-products');
 
   // Load products with fallback to initial catalog
@@ -49,6 +62,30 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
 
+  // Persist session
+  const handleLogin = (session: UserSession) => {
+    setUserSession(session);
+    try {
+      localStorage.setItem('dababi3_session', JSON.stringify(session));
+    } catch {
+      // ignore
+    }
+    if (session.role === 'supplier') {
+      setCurrentView('supplier-add-product');
+    } else {
+      setCurrentView('browse-products');
+    }
+  };
+
+  const handleLogout = () => {
+    setUserSession(null);
+    try {
+      localStorage.removeItem('dababi3_session');
+    } catch {
+      // ignore
+    }
+  };
+
   // Persist products to localStorage
   useEffect(() => {
     try {
@@ -77,20 +114,27 @@ export default function App() {
     setProducts((prev) => [newProduct, ...prev]);
   };
 
-  // Scroll to top on view change
   const handleNavigate = (view: ViewMode) => {
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // 1. First condition: Show login page first before entering DABABI3
+  if (!userSession) {
+    return <AuthScreen onLogin={handleLogin} />;
+  }
+
+  // 2. Main site once logged in
   return (
-    <div className="min-h-screen flex flex-col bg-[#f9f9f7] text-[#1a1c1b] font-arabic antialiased" dir="rtl">
-      {/* Top Fixed Header */}
+    <div className="min-h-screen flex flex-col bg-[#f9f9f7] text-slate-900 font-fluid antialiased" dir="rtl">
+      {/* Top Header strictly DABABI3 */}
       <Header
         currentView={currentView}
         onNavigate={handleNavigate}
         favoritesCount={favorites.length}
         onOpenFavorites={() => setIsFavoritesOpen(true)}
+        userSession={userSession}
+        onLogout={handleLogout}
       />
 
       {/* Main Screen Content */}
@@ -135,7 +179,7 @@ export default function App() {
         onSelectProduct={(p) => setSelectedProduct(p)}
       />
 
-      {/* Persistent Footer */}
+      {/* Persistent Footer strictly DABABI3 */}
       <Footer onNavigate={handleNavigate} />
     </div>
   );

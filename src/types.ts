@@ -3,7 +3,10 @@ export type CategoryId = 'all' | 'electronics' | 'fashion' | 'food' | 'wholesale
 export interface Category {
   id: CategoryId;
   label: string;
-  icon?: string;
+  badgeBg: string;
+  badgeText: string;
+  borderClass: string;
+  activeBg: string;
 }
 
 export interface Product {
