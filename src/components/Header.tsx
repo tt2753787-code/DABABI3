@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ViewMode } from '../types';
 import { Logo } from './Logo';
 import { UserSession } from './AuthScreen';
-import { Bookmark, PlusCircle, Store, Info, Menu, X, LogOut, User } from 'lucide-react';
+import { Bookmark, PlusCircle, Store, Info, Menu, X, LogOut, User, Settings } from 'lucide-react';
 
 interface HeaderProps {
   currentView: ViewMode;
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenFavorites: () => void;
   userSession: UserSession | null;
   onLogout: () => void;
+  onOpenSettings: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenFavorites,
   userSession,
   onLogout,
+  onOpenSettings,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -48,13 +50,18 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm font-fluid">
       <div className="h-16 w-full max-w-[1280px] mx-auto px-4 md:px-8 flex items-center justify-between">
-        {/* Brand / Logo strictly DABABI3 */}
-        <button
-          onClick={() => onNavigate('browse-products')}
-          className="flex items-center group transition-transform hover:scale-[1.01] focus:outline-none"
-        >
-          <Logo size="md" />
-        </button>
+        {/* Brand / Logo strictly DABABI3 with portal subtitle */}
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => onNavigate('browse-products')}
+            className="flex items-center group transition-transform hover:scale-[1.01] focus:outline-none"
+          >
+            <Logo size="md" />
+          </button>
+          <span className="text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-300 text-emerald-950 whitespace-nowrap">
+            بوابة الموردين والمشترين
+          </span>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
@@ -79,10 +86,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Action Icons & User Session */}
         <div className="flex items-center gap-2">
+          {/* Settings Button */}
+          <button
+            onClick={onOpenSettings}
+            className="p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+            title="الإعدادات (اللغة، الحساب، الوضع المظلم)"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
           {/* Favorites Button */}
           <button
             onClick={onOpenFavorites}
-            className="relative p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+            className="relative p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
             title="المفضلة"
           >
             <Bookmark className="w-4 h-4" />
@@ -96,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Supplier Quick Button */}
           <button
             onClick={() => onNavigate('supplier-add-product')}
-            className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             <span>إضافة سلعة</span>
@@ -106,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-2 p-1.5 pl-2 rounded-xl hover:bg-slate-100 transition-all border border-slate-200"
+              className="flex items-center gap-2 p-1.5 pl-2 rounded-xl hover:bg-slate-100 transition-all border border-slate-200 cursor-pointer"
             >
               <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-600 via-teal-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
                 <User className="w-3.5 h-3.5" />
@@ -137,9 +153,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => {
                     setProfileOpen(false);
+                    onOpenSettings();
+                  }}
+                  className="w-full text-right p-2 rounded-xl hover:bg-slate-50 text-slate-700 font-bold flex items-center justify-between cursor-pointer"
+                >
+                  <span>إعدادات الحساب</span>
+                  <Settings className="w-3.5 h-3.5 text-slate-500" />
+                </button>
+                <button
+                  onClick={() => {
+                    setProfileOpen(false);
                     onLogout();
                   }}
-                  className="w-full text-right p-2 rounded-xl hover:bg-rose-50 text-rose-600 font-bold flex items-center justify-between"
+                  className="w-full text-right p-2 rounded-xl hover:bg-rose-50 text-rose-600 font-bold flex items-center justify-between cursor-pointer"
                 >
                   <span>تسجيل الخروج</span>
                   <LogOut className="w-3.5 h-3.5" />

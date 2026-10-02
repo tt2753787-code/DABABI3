@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Product } from '../types';
 import { buildWhatsAppLink } from '../utils/whatsapp';
 import { CATEGORIES } from '../data/initialProducts';
-import { CheckCircle2, MessageCircle, Bookmark, Copy, Check, Eye, MapPin } from 'lucide-react';
+import {
+  CheckCircle2,
+  MessageCircle,
+  Bookmark,
+  Copy,
+  Check,
+  Eye,
+  MapPin,
+  MoreVertical,
+  Edit2,
+  Trash2,
+} from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onSelectProduct: (product: Product) => void;
+  isSellerMode?: boolean;
+  onEditProduct?: (product: Product) => void;
+  onDeleteProduct?: (productId: string) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -16,8 +30,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   isFavorite,
   onToggleFavorite,
   onSelectProduct,
+  isSellerMode = false,
+  onEditProduct,
+  onDeleteProduct,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   const categoryConfig = CATEGORIES.find((c) => c.id === product.category) || {
     badgeBg: 'bg-emerald-50',
@@ -41,7 +75,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <article className="group bg-white rounded-3xl flex flex-col overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all duration-300 font-fluid">
+    <article className="group bg-white rounded-3xl flex flex-col overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all duration-300 font-fluid relative">
       {/* Product Image Box */}
       <div
         onClick={() => onSelectProduct(product)}
@@ -92,6 +126,58 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         >
           <Bookmark className={`w-3.5 h-3.5 ${isFavorite ? 'fill-white' : ''}`} />
         </button>
+
+        {/* 3-Dots Menu Button over the image for Sellers */}
+        {isSellerMode && (
+          <div className="absolute top-3 left-12 z-20" ref={menuRef}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className="p-2 rounded-xl bg-white/95 hover:bg-white text-slate-700 shadow-md backdrop-blur-md transition-all cursor-pointer flex items-center justify-center"
+              title="خيارات السلعة (تعديل / مسح)"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {menuOpen && (
+              <div
+                className="absolute left-0 mt-1 w-32 bg-white rounded-2xl border border-slate-200 shadow-2xl p-1.5 z-30 animate-fadeIn"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* تعديل */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (onEditProduct) onEditProduct(product);
+                  }}
+                  className="w-full text-right px-3 py-2 rounded-xl hover:bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span>تعديل</span>
+                  <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                </button>
+
+                {/* مسح */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (confirm(`هل أنت متأكد من مسح سلعة "${product.name}" نهائياً من الموقع؟`)) {
+                      if (onDeleteProduct) onDeleteProduct(product.id);
+                    }
+                  }}
+                  className="w-full text-right px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-600 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span>مسح</span>
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Product Content Details */}
@@ -119,7 +205,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {product.name}
           </h2>
 
-          {/* Description - clean and simplified */}
+          {/* Description */}
           <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
             {product.description}
           </p>

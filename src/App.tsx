@@ -2,9 +2,16 @@
  * DABABI3
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Product, ViewMode } from './types';
 import { INITIAL_PRODUCTS } from './data/initialProducts';
+import {
+  fetchProductsApi,
+  saveProductApi,
+  updateProductApi,
+  deleteProductApi,
+  saveSupplierApi,
+} from './utils/api';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { BrowseView } from './components/BrowseView';
@@ -13,6 +20,8 @@ import { AboutView } from './components/AboutView';
 import { ProductModal } from './components/ProductModal';
 import { FavoritesModal } from './components/FavoritesModal';
 import { AuthScreen, UserSession } from './components/AuthScreen';
+import { SettingsModal } from './components/SettingsModal';
+import { EditProductModal } from './components/EditProductModal';
 
 export default function App() {
   // Authentication session - Login page shown first before entering
@@ -30,7 +39,7 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState<ViewMode>('browse-products');
 
-  // Load products with fallback to initial catalog
+  // Load products from shared server storage with fallback to initial catalog
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('dababi3_products');
@@ -59,18 +68,76 @@ export default function App() {
     return ['prod-1', 'prod-3'];
   });
 
+  // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Settings State: Dark Mode & Language
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('dababi3_dark_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [language, setLanguage] = useState<string>(() => {
+    try {
+      return localStorage.getItem('dababi3_lang') || 'ar';
+    } catch {
+      return 'ar';
+    }
+  });
+
+  // Dark mode effect on HTML
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('dababi3_dark_mode', isDarkMode ? 'true' : 'false');
+    } catch {}
+  }, [isDarkMode]);
+
+  // Language persistence
+  const handleSelectLanguage = (lang: string) => {
+    setLanguage(lang);
+    try {
+      localStorage.setItem('dababi3_lang', lang);
+    } catch {}
+  };
+
+  // Sync shared products from server
+  const syncProductsFromServer = useCallback(async () => {
+    const list = await fetchProductsApi();
+    if (list && list.length > 0) {
+      setProducts(list);
+    }
+  }, []);
+
+  // Fetch on mount and periodically so any product added by any user on the link appears immediately
+  useEffect(() => {
+    syncProductsFromServer();
+    const interval = setInterval(syncProductsFromServer, 10000);
+    return () => clearInterval(interval);
+  }, [syncProductsFromServer]);
 
   // Persist session
   const handleLogin = (session: UserSession) => {
     setUserSession(session);
     try {
       localStorage.setItem('dababi3_session', JSON.stringify(session));
+      localStorage.setItem('dababi3_supplier_profile', JSON.stringify(session));
     } catch {
       // ignore
     }
+
     if (session.role === 'supplier') {
+      saveSupplierApi(session.storeName || session.name, session.city, session.phone);
       setCurrentView('supplier-add-product');
     } else {
       setCurrentView('browse-products');
@@ -86,14 +153,14 @@ export default function App() {
     }
   };
 
-  // Persist products to localStorage
-  useEffect(() => {
+  const handleUpdateSession = (updated: UserSession) => {
+    setUserSession(updated);
     try {
-      localStorage.setItem('dababi3_products', JSON.stringify(products));
-    } catch {
-      // ignore
-    }
-  }, [products]);
+      localStorage.setItem('dababi3_session', JSON.stringify(updated));
+      localStorage.setItem('dababi3_supplier_profile', JSON.stringify(updated));
+    } catch {}
+    saveSupplierApi(updated.storeName || updated.name, updated.city, updated.phone);
+  };
 
   // Persist favorites to localStorage
   useEffect(() => {
@@ -110,8 +177,22 @@ export default function App() {
     );
   };
 
-  const handleAddProduct = (newProduct: Product) => {
-    setProducts((prev) => [newProduct, ...prev]);
+  // Add product and save to shared backend server storage so it appears for all visitors on the link
+  const handleAddProduct = async (newProduct: Product) => {
+    setProducts((prev) => [newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
+    await saveProductApi(newProduct);
+  };
+
+  // Edit product
+  const handleSaveEditedProduct = async (updated: Product) => {
+    setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    await updateProductApi(updated);
+  };
+
+  // Delete product
+  const handleDeleteProduct = async (productId: string) => {
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    await deleteProductApi(productId);
   };
 
   const handleNavigate = (view: ViewMode) => {
@@ -126,7 +207,12 @@ export default function App() {
 
   // 2. Main site once logged in
   return (
-    <div className="min-h-screen flex flex-col bg-[#f9f9f7] text-slate-900 font-fluid antialiased" dir="rtl">
+    <div
+      className={`min-h-screen flex flex-col font-fluid antialiased transition-colors ${
+        isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#f9f9f7] text-slate-900'
+      }`}
+      dir="rtl"
+    >
       {/* Top Header strictly DABABI3 */}
       <Header
         currentView={currentView}
@@ -135,6 +221,7 @@ export default function App() {
         onOpenFavorites={() => setIsFavoritesOpen(true)}
         userSession={userSession}
         onLogout={handleLogout}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Screen Content */}
@@ -146,6 +233,9 @@ export default function App() {
             favorites={favorites}
             onToggleFavorite={handleToggleFavorite}
             onSelectProduct={(p) => setSelectedProduct(p)}
+            userSession={userSession}
+            onEditProduct={(p) => setEditingProduct(p)}
+            onDeleteProduct={handleDeleteProduct}
           />
         )}
 
@@ -153,6 +243,8 @@ export default function App() {
           <SupplierAddView
             onAddProduct={handleAddProduct}
             onNavigate={handleNavigate}
+            userSession={userSession}
+            onUpdateSession={handleUpdateSession}
           />
         )}
 
@@ -167,6 +259,28 @@ export default function App() {
         onClose={() => setSelectedProduct(null)}
         isFavorite={selectedProduct ? favorites.includes(selectedProduct.id) : false}
         onToggleFavorite={handleToggleFavorite}
+      />
+
+      {/* Edit Product Modal (accessed from 3-dots menu on product) */}
+      <EditProductModal
+        product={editingProduct}
+        isOpen={!!editingProduct}
+        onClose={() => setEditingProduct(null)}
+        onSave={handleSaveEditedProduct}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Settings Modal (Language, Account Info, Dark/Light Mode) */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        userSession={userSession}
+        onUpdateSession={handleUpdateSession}
+        onLogout={handleLogout}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={setIsDarkMode}
+        language={language}
+        onSelectLanguage={handleSelectLanguage}
       />
 
       {/* Favorites Drawer/Modal */}

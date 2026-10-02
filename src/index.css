@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Readex+Pro:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
 @layer base {
   :root {
     --primary: #00422b;
@@ -10,20 +12,22 @@
     --accent-cyan: #06b6d4;
   }
   
-  html, body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Alexandria', 'Outfit', 'Tajawal', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.01em;
+  *, html, body, input, button, select, textarea {
+    font-family: 'Readex Pro', 'IBM Plex Sans Arabic', 'Outfit', system-ui, -apple-system, sans-serif !important;
+    letter-spacing: -0.015em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif !important;
   }
 }
 
 .font-display {
-  font-family: 'Space Grotesk', 'Alexandria', 'Outfit', sans-serif;
+  font-family: 'Space Grotesk', 'Readex Pro', 'Outfit', sans-serif !important;
 }
 
 .font-fluid {
-  font-family: 'Alexandria', 'Tajawal', sans-serif;
+  font-family: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif !important;
 }
 
 /* Custom scrollbars */
@@ -41,4 +45,5 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
 
