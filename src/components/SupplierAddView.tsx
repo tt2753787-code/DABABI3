@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Product, CategoryId, ViewMode, Language } from '../types';
-import { PRESET_IMAGES, MOROCCAN_CITIES } from '../data/initialProducts';
+import { MOROCCAN_CITIES } from '../data/initialProducts';
 import { formatDisplayPhone } from '../utils/whatsapp';
 import { saveSupplierApi } from '../utils/api';
 import { Logo } from './Logo';
 import { UserSession } from './AuthScreen';
-import { getTranslation } from '../utils/translations';
+import { getTranslation, getCategoryLabel, getCityLabel } from '../utils/translations';
 import {
   Store,
   MessageCircle,
@@ -366,7 +366,7 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                   >
                     {MOROCCAN_CITIES.filter((c) => c !== 'الكل').map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {getCityLabel(c, language)}
                       </option>
                     ))}
                   </select>
@@ -393,16 +393,20 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
               </div>
             </div>
 
-            {/* 2. قسم بيانات السلعة المراد إضافتها */}
+            {/* 2. قسم بيانات المنتج المراد إضافته */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
                 <Plus className="w-4 h-4 text-emerald-600" />
-                <h2 className="font-bold text-base text-slate-900 dark:text-white">بيانات السلعة</h2>
+                <h2 className="font-bold text-base text-slate-900 dark:text-white">
+                  {language === 'fr' ? 'Détails du produit' : 'بيانات المنتج'}
+                </h2>
               </div>
-              <span className="text-[11px] text-slate-400">تظهر للجميع بنفس الرابط</span>
+              <span className="text-[11px] text-slate-400">
+                {language === 'fr' ? 'Visible par tous sur le même lien' : 'يظهر للجميع بنفس الرابط'}
+              </span>
             </div>
 
-            {/* اسم السلعة والثمن */}
+            {/* اسم المنتج والثمن */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2 flex flex-col gap-1">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -413,7 +417,7 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                   required
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  placeholder="مثال: حقيبة سفر جلد طبيعي أصيل"
+                  placeholder={language === 'fr' ? 'Ex: Sac de voyage en cuir artisanal' : 'مثال: حقيبة سفر جلد طبيعي أصيل'}
                   className="h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-600 outline-none transition-all"
                 />
               </div>
@@ -451,7 +455,7 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                     type="button"
                     onClick={() => {
                       setSelectedCategory(opt.id);
-                      setCategoryLabel(opt.label);
+                      setCategoryLabel(getCategoryLabel(opt.id, language));
                     }}
                     className={`p-2.5 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
                       selectedCategory === opt.id
@@ -459,7 +463,7 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                         : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
                     }`}
                   >
-                    {opt.label}
+                    {getCategoryLabel(opt.id, language)}
                   </button>
                 ))}
               </div>
@@ -608,8 +612,16 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
                 <div className="text-xs">
-                  <span className="font-bold block">تم نشر سلعة "{lastAddedName}" بنجاح!</span>
-                  <span>أصبحت معروضة الآن لجميع الزوار على نفس رابط الموقع.</span>
+                  <span className="font-bold block">
+                    {language === 'fr'
+                      ? `Le produit "${lastAddedName}" a été publié avec succès !`
+                      : `تم نشر منتج "${lastAddedName}" بنجاح!`}
+                  </span>
+                  <span>
+                    {language === 'fr'
+                      ? 'Il est maintenant visible par tous les visiteurs sur le même lien.'
+                      : 'أصبح معروضاً الآن لجميع الزوار على نفس رابط الموقع.'}
+                  </span>
                 </div>
               </div>
               <button
@@ -617,7 +629,7 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                 onClick={() => onNavigate('browse-products')}
                 className="px-3 py-1.5 rounded-xl bg-white text-emerald-900 text-xs font-bold shrink-0 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                مشاهدة في المتجر
+                {language === 'fr' ? 'Voir dans le catalogue' : 'مشاهدة في قائمة المنتجات'}
               </button>
             </div>
           )}
@@ -628,10 +640,14 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-emerald-600" />
-              <span>معاينة حية لشكل السلعة في المتجر:</span>
+              <span>
+                {language === 'fr'
+                  ? 'Aperçu en direct du produit dans le catalogue :'
+                  : 'معاينة حية لشكل المنتج في قائمة المنتجات:'}
+              </span>
             </span>
             <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-              تحديث فوري
+              {language === 'fr' ? 'En direct' : 'تحديث فوري'}
             </span>
           </div>
 

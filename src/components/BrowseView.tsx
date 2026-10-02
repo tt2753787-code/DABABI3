@@ -4,7 +4,7 @@ import { CATEGORIES, MOROCCAN_CITIES, SUPPORT_WHATSAPP_LINK } from '../data/init
 import { ProductCard } from './ProductCard';
 import { Logo } from './Logo';
 import { UserSession } from './AuthScreen';
-import { getTranslation } from '../utils/translations';
+import { getTranslation, getCategoryLabel, getCityLabel } from '../utils/translations';
 import {
   Search,
   CheckCircle2,
@@ -204,7 +204,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             >
               {MOROCCAN_CITIES.map((city) => (
                 <option key={city} value={city}>
-                  {city === 'الكل' ? t.allCities : city}
+                  {getCityLabel(city, language)}
                 </option>
               ))}
             </select>
@@ -242,7 +242,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
                     : `${cat.badgeBg} ${cat.badgeText} ${cat.borderClass} hover:opacity-90 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700`
                 }`}
               >
-                {cat.label}
+                {getCategoryLabel(cat.id, language)}
               </button>
             );
           })}
@@ -335,8 +335,14 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             <Zap className="w-4 h-4 fill-current" />
           </div>
           <div className="text-xs">
-            <span className="font-bold text-slate-900 dark:text-white block">DABABI3 بدون عمولة وبدون وساطة</span>
-            <span className="text-slate-500 dark:text-slate-400">تفاهم على السعر وطريقة الاستلام مباشرة مع المورد على الواتساب.</span>
+            <span className="font-bold text-slate-900 dark:text-white block">
+              {language === 'fr' ? 'DABABI3 sans commission et sans intermédiaire' : 'DABABI3 بدون عمولة وبدون وساطة'}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400">
+              {language === 'fr'
+                ? 'Négociez le prix et les modalités de livraison directement avec le fournisseur sur WhatsApp.'
+                : 'تفاهم على السعر وطريقة الاستلام مباشرة مع المورد على الواتساب.'}
+            </span>
           </div>
         </div>
         <a

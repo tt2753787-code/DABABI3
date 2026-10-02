@@ -103,13 +103,13 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Action Icons & User Session */}
         <div className="flex items-center gap-2">
-          {/* Button "الصفحات" in place of "إضافة سلعة" as explicitly requested */}
+          {/* Button "أضف منتج جديد" in place of duplicate Pages button */}
           <button
-            onClick={onOpenPages}
-            className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/15 to-purple-500/15 border border-indigo-300 text-indigo-950 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer shadow-xs"
+            onClick={() => onNavigate('supplier-add-product')}
+            className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <FileText className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{t.pages}</span>
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>{t.addProduct}</span>
           </button>
 
           {/* Settings Button */}

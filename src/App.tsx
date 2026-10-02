@@ -47,7 +47,8 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          const cleaned = parsed.filter((p: any) => p && p.id && !['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7'].includes(p.id));
+          return cleaned;
         }
       }
     } catch {
