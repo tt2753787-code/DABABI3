@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Product } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Product, Language } from '../types';
 import { buildWhatsAppLink } from '../utils/whatsapp';
+import { getTranslation } from '../utils/translations';
 import {
   X,
   MessageCircle,
@@ -13,6 +14,8 @@ import {
   Store,
   ShieldCheck,
   Package,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface ProductModalProps {
@@ -20,6 +23,8 @@ interface ProductModalProps {
   onClose: () => void;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
+  language?: Language;
+  isDarkMode?: boolean;
 }
 
 export const ProductModal: React.FC<ProductModalProps> = ({
@@ -27,11 +32,25 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onClose,
   isFavorite,
   onToggleFavorite,
+  language = 'ar',
+  isDarkMode = false,
 }) => {
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const t = getTranslation(language);
+
+  useEffect(() => {
+    setActiveImgIdx(0);
+  }, [product]);
 
   if (!product) return null;
+
+  const allPhotos = product.images && product.images.length > 0
+    ? product.images
+    : [product.imageUrl];
+
+  const currentDisplayImage = allPhotos[activeImgIdx] || product.imageUrl;
 
   const whatsappLink = buildWhatsAppLink(
     product.whatsappNumber,
@@ -52,136 +71,193 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handlePrev = () => {
+    setActiveImgIdx((prev) => (prev === 0 ? allPhotos.length - 1 : prev - 1));
+  };
+
+  const handleNext = () => {
+    setActiveImgIdx((prev) => (prev === allPhotos.length - 1 ? 0 : prev + 1));
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn font-fluid" dir="rtl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-sm animate-fadeIn font-fluid"
+      dir={language === 'fr' ? 'ltr' : 'rtl'}
+    >
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="relative w-full max-w-xl bg-white rounded-3xl overflow-hidden shadow-2xl z-10 max-h-[90vh] flex flex-col">
+      <div
+        className={`relative w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl z-10 max-h-[90vh] flex flex-col border transition-colors ${
+          isDarkMode
+            ? 'bg-slate-900 border-slate-800 text-white'
+            : 'bg-white border-slate-200 text-slate-900'
+        }`}
+      >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 z-20 p-2 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md transition-all"
+          className="absolute top-4 left-4 z-20 p-2 rounded-full bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-white shadow-md transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="overflow-y-auto">
-          {/* Visual */}
-          <div className="relative w-full aspect-[16/10] bg-slate-100">
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-            {product.verified && (
-              <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-1.5 shadow-md">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>مورد معتمد</span>
+          {/* Visual with multiple photos support */}
+          <div className="flex flex-col bg-slate-100 dark:bg-slate-800">
+            <div className="relative w-full aspect-[16/10] overflow-hidden group">
+              <img
+                src={currentDisplayImage}
+                alt={product.name}
+                className="w-full h-full object-cover transition-all duration-300"
+              />
+
+              {allPhotos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-sm transition-all cursor-pointer"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-sm transition-all cursor-pointer"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+
+                  <span className="absolute top-4 left-14 bg-slate-900/80 text-white text-xs font-bold px-2.5 py-1 rounded-xl backdrop-blur-sm">
+                    {activeImgIdx + 1}/{allPhotos.length}
+                  </span>
+                </>
+              )}
+
+              {product.verified && (
+                <div className="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 shadow-md">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{t.supplierVerified}</span>
+                </div>
+              )}
+              <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-md text-white text-xs px-3 py-1 rounded-lg">
+                {product.categoryLabel}
+              </div>
+            </div>
+
+            {/* Thumbnail carousel if product has multiple photos */}
+            {allPhotos.length > 1 && (
+              <div className="flex items-center gap-2 p-3 bg-slate-200/60 dark:bg-slate-950/60 overflow-x-auto">
+                {allPhotos.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveImgIdx(idx)}
+                    className={`w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                      activeImgIdx === idx
+                        ? 'border-emerald-600 ring-2 ring-emerald-500/40 shadow-sm'
+                        : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
-            <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-md text-white text-xs px-3 py-1 rounded-lg">
-              {product.categoryLabel}
-            </div>
           </div>
 
-          <div className="p-5 flex flex-col gap-4">
+          <div className="p-5 sm:p-6 flex flex-col gap-4">
             {/* Header info */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{product.supplierCity} • {product.supplierName}</span>
                 </div>
 
                 <div className="flex items-baseline gap-1">
-                  <span className="font-display font-black text-2xl text-emerald-800">
+                  <span className="font-display font-black text-2xl text-emerald-800 dark:text-emerald-400">
                     {product.price.toLocaleString('fr-FR')}
                   </span>
-                  <span className="font-bold text-xs text-emerald-700">درهم</span>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{t.currency}</span>
                 </div>
               </div>
 
-              <h1 className="font-bold text-lg sm:text-xl text-slate-900 leading-tight">
+              <h1 className="font-bold text-lg md:text-xl text-slate-900 dark:text-white">
                 {product.name}
               </h1>
             </div>
 
-            {/* Quick Specs */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-2">
-                <Package className="w-4 h-4 text-emerald-600" />
-                <div>
-                  <span className="text-slate-400 block text-[10px]">الكمية</span>
-                  <span className="font-bold text-slate-800">{product.unit || 'حسب الطلب'}</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <div>
-                  <span className="text-slate-400 block text-[10px]">الدفع</span>
-                  <span className="font-bold text-slate-800">عند الاستلام (Cash)</span>
-                </div>
-              </div>
-            </div>
-
             {/* Description */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 leading-relaxed whitespace-pre-line">
-              {product.description}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                {t.productDesc}
+              </span>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                {product.description}
+              </p>
             </div>
 
-            {/* Supplier WhatsApp Direct Box with mixed gradient */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-200 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">
-                  {product.supplierName} ({product.supplierCity})
-                </span>
+            {/* Store & Direct Contact Box */}
+            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div className="text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white block">{product.supplierName}</span>
+                  <span className="text-slate-500 dark:text-slate-400">مورد مباشر في {product.supplierCity}</span>
+                </div>
+              </div>
 
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-bold text-xs text-slate-800 dark:text-slate-200" dir="ltr">
+                  {product.whatsappNumber}
+                </span>
                 <button
                   onClick={handleCopyPhone}
-                  className="flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white border border-slate-200"
+                  className="p-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
+                  title={t.copyPhone}
                 >
-                  <span dir="ltr">{product.whatsappNumber}</span>
-                  {copiedPhone ? (
-                    <Check className="w-3 h-3 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-3 h-3 text-slate-400" />
-                  )}
+                  {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
+            </div>
 
+            {/* Actions: Direct WhatsApp CTA + Bookmark & Share */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <a
                 href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full h-12 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.99]"
+                className="flex-1 h-12 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] cursor-pointer"
               >
-                <MessageCircle className="w-4 h-4 fill-current" />
-                <span>طلب السلعة عبر واتساب</span>
+                <MessageCircle className="w-5 h-5 fill-current" />
+                <span>{t.orderOnWhatsApp}</span>
               </a>
-            </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-1">
-              <button
-                onClick={() => onToggleFavorite(product.id)}
-                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors ${
-                  isFavorite
-                    ? 'bg-rose-500 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${isFavorite ? 'fill-white' : ''}`} />
-                <span>{isFavorite ? 'محفوظ في المفضلة' : 'حفظ في المفضلة'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onToggleFavorite(product.id)}
+                  className={`h-12 px-4 rounded-2xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    isFavorite
+                      ? 'bg-rose-500 border-rose-500 text-white shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Bookmark className={`w-4 h-4 ${isFavorite ? 'fill-white' : ''}`} />
+                  <span>{isFavorite ? 'محفوظ' : 'حفظ'}</span>
+                </button>
 
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 p-1.5"
-              >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
-                <span>{copiedLink ? 'تم النسخ!' : 'مشاركة'}</span>
-              </button>
+                <button
+                  onClick={handleShare}
+                  className="h-12 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
+                  title="مشاركة الرابط"
+                >
+                  {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                  <span>{copiedLink ? 'تم النسخ!' : 'مشاركة'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -189,4 +265,3 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     </div>
   );
 };
-

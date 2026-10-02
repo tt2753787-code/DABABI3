@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Product, CategoryId, ViewMode } from '../types';
-import { PRESET_IMAGES } from '../data/initialProducts';
+import { Product, CategoryId, ViewMode, Language } from '../types';
+import { PRESET_IMAGES, MOROCCAN_CITIES } from '../data/initialProducts';
 import { formatDisplayPhone } from '../utils/whatsapp';
 import { saveSupplierApi } from '../utils/api';
 import { Logo } from './Logo';
 import { UserSession } from './AuthScreen';
+import { getTranslation } from '../utils/translations';
 import {
   Store,
   MessageCircle,
@@ -19,6 +20,11 @@ import {
   MapPin,
   ShieldCheck,
   Plus,
+  Trash2,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
 } from 'lucide-react';
 
 interface SupplierAddViewProps {
@@ -26,6 +32,7 @@ interface SupplierAddViewProps {
   onNavigate: (view: ViewMode) => void;
   userSession: UserSession | null;
   onUpdateSession?: (session: UserSession) => void;
+  language?: Language;
 }
 
 export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
@@ -33,60 +40,109 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
   onNavigate,
   userSession,
   onUpdateSession,
+  language = 'ar',
 }) => {
+  const t = getTranslation(language);
+
   // Helper to load persistent supplier data from userSession or localStorage
-  const getSavedStore = () => {
+  const getInitialStore = () => {
     if (userSession?.storeName) return userSession.storeName;
     if (userSession?.name && userSession.role === 'supplier') return userSession.name;
     try {
-      const saved = localStorage.getItem('dababi3_supplier_profile');
-      if (saved) {
-        const p = JSON.parse(saved);
+      const savedStore = localStorage.getItem('dababi3_saved_store');
+      if (savedStore) return savedStore;
+      const savedProfile = localStorage.getItem('dababi3_supplier_profile');
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
         if (p.storeName) return p.storeName;
         if (p.name) return p.name;
       }
     } catch {}
-    return 'ورشة الأطلس للصناعات';
+    return '';
   };
 
-  const getSavedCity = () => {
+  const getInitialCity = () => {
     if (userSession?.city) return userSession.city;
     try {
-      const saved = localStorage.getItem('dababi3_supplier_profile');
-      if (saved) {
-        const p = JSON.parse(saved);
+      const savedCity = localStorage.getItem('dababi3_saved_city');
+      if (savedCity) return savedCity;
+      const savedProfile = localStorage.getItem('dababi3_supplier_profile');
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
         if (p.city) return p.city;
       }
     } catch {}
-    return 'فاس';
+    return 'الدار البيضاء';
   };
 
-  const getSavedPhone = () => {
+  const getInitialPhone = () => {
     if (userSession?.phone) return userSession.phone;
     try {
-      const saved = localStorage.getItem('dababi3_supplier_profile');
-      if (saved) {
-        const p = JSON.parse(saved);
+      const savedPhone = localStorage.getItem('dababi3_saved_phone');
+      if (savedPhone) return savedPhone;
+      const savedProfile = localStorage.getItem('dababi3_supplier_profile');
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
         if (p.phone) return p.phone;
       }
     } catch {}
-    return '0667889900';
+    return '';
   };
 
-  // 1. Supplier personal info states - ALWAYS PRE-FILLED from account
-  const [supplierName, setSupplierName] = useState(getSavedStore());
-  const [supplierCity, setSupplierCity] = useState(getSavedCity());
-  const [whatsappNumber, setWhatsappNumber] = useState(getSavedPhone());
+  // 1. Supplier personal info states - ALWAYS REMEMBERED
+  const [supplierName, setSupplierName] = useState(getInitialStore);
+  const [supplierCity, setSupplierCity] = useState(getInitialCity);
+  const [whatsappNumber, setWhatsappNumber] = useState(getInitialPhone);
 
-  // Automatically update whenever userSession or storage updates
+  // Sync state if userSession changes
   useEffect(() => {
-    const sName = getSavedStore();
-    const sCity = getSavedCity();
-    const sPhone = getSavedPhone();
-    if (sName) setSupplierName(sName);
-    if (sCity) setSupplierCity(sCity);
-    if (sPhone) setWhatsappNumber(sPhone);
+    const sName = getInitialStore();
+    const sCity = getInitialCity();
+    const sPhone = getInitialPhone();
+    if (sName && !supplierName) setSupplierName(sName);
+    if (sCity && !supplierCity) setSupplierCity(sCity);
+    if (sPhone && !whatsappNumber) setWhatsappNumber(sPhone);
   }, [userSession]);
+
+  // Persist supplier fields immediately as user types
+  const handleStoreNameChange = (val: string) => {
+    setSupplierName(val);
+    try {
+      localStorage.setItem('dababi3_saved_store', val);
+      const prev = localStorage.getItem('dababi3_supplier_profile');
+      const parsed = prev ? JSON.parse(prev) : {};
+      localStorage.setItem('dababi3_supplier_profile', JSON.stringify({ ...parsed, storeName: val, name: val }));
+    } catch {}
+    if (userSession && onUpdateSession) {
+      onUpdateSession({ ...userSession, storeName: val, name: val });
+    }
+  };
+
+  const handleCityChange = (val: string) => {
+    setSupplierCity(val);
+    try {
+      localStorage.setItem('dababi3_saved_city', val);
+      const prev = localStorage.getItem('dababi3_supplier_profile');
+      const parsed = prev ? JSON.parse(prev) : {};
+      localStorage.setItem('dababi3_supplier_profile', JSON.stringify({ ...parsed, city: val }));
+    } catch {}
+    if (userSession && onUpdateSession) {
+      onUpdateSession({ ...userSession, city: val });
+    }
+  };
+
+  const handlePhoneChange = (val: string) => {
+    setWhatsappNumber(val);
+    try {
+      localStorage.setItem('dababi3_saved_phone', val);
+      const prev = localStorage.getItem('dababi3_supplier_profile');
+      const parsed = prev ? JSON.parse(prev) : {};
+      localStorage.setItem('dababi3_supplier_profile', JSON.stringify({ ...parsed, phone: val }));
+    } catch {}
+    if (userSession && onUpdateSession) {
+      onUpdateSession({ ...userSession, phone: val });
+    }
+  };
 
   // 2. Product specific inputs
   const [productName, setProductName] = useState('');
@@ -94,42 +150,94 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('crafts');
   const [categoryLabel, setCategoryLabel] = useState('صناعة تقليدية وجلد');
   const [productDesc, setProductDesc] = useState('');
-  const [imageUrl, setImageUrl] = useState(
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDMyOymILKVCZrCRteazYCpS7gU92di06hadzboigfHeNL_67WCNYmRhi8Xc9wXDGrkNuhfEm5bwp1PS13MPFfme0RMGkn8zco8lgViaP1wSqyNlL4-ZZw55fL8ll3DqylPUQsVOPyOIOM7anEV7s9lW5mo9ngFM3SHAmyGnNpltLRtg9_UN4XmmmVd1XvZSTn8R4uyzPB9FyFR_3fSwYhB6G9p2rDJivV_EtCPOBhriniCOKbYfKbt'
-  );
+  
+  // Multiple images state
+  const [images, setImages] = useState<string[]>([]);
+  const [previewActiveImgIdx, setPreviewActiveImgIdx] = useState(0);
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [inputUrl, setInputUrl] = useState('');
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [lastAddedName, setLastAddedName] = useState('');
 
   const categoryOptions: { id: CategoryId; label: string; color: string }[] = [
     { id: 'crafts', label: 'صناعة تقليدية وجلد', color: 'from-orange-500 to-amber-600' },
-    { id: 'food', label: 'زيوت وطبيعي', color: 'from-amber-500 to-yellow-600' },
+    { id: 'food', label: 'زيوت ومواد غذائية', color: 'from-amber-500 to-yellow-600' },
     { id: 'decor', label: 'زرابي وديكور', color: 'from-teal-500 to-emerald-600' },
     { id: 'wholesale', label: 'سلع بالجملة', color: 'from-purple-500 to-indigo-600' },
     { id: 'electronics', label: 'أجهزة وإلكترونيات', color: 'from-blue-500 to-cyan-600' },
     { id: 'fashion', label: 'ملابس وأزياء', color: 'from-rose-500 to-pink-600' },
   ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+  // Upload multiple images from local storage/camera
+  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            const dataUrl = event.target.result as string;
+            setImages((prev) => [...prev, dataUrl]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+
+  // Add image by direct URL
+  const handleAddDirectUrl = () => {
+    if (inputUrl.trim()) {
+      setImages((prev) => [...prev, inputUrl.trim()]);
+      setInputUrl('');
+      setShowUrlInput(false);
+    }
+  };
+
+  // Remove single image
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages((prev) => {
+      const filtered = prev.filter((_, i) => i !== indexToRemove);
+      if (previewActiveImgIdx >= filtered.length) {
+        setPreviewActiveImgIdx(Math.max(0, filtered.length - 1));
+      }
+      return filtered;
+    });
+  };
+
+  // Make an image primary (swap to index 0)
+  const handleSetPrimary = (index: number) => {
+    if (index === 0) return;
+    setImages((prev) => {
+      const copy = [...prev];
+      const selected = copy.splice(index, 1)[0];
+      return [selected, ...copy];
+    });
+    setPreviewActiveImgIdx(0);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const priceNum = parseFloat(productPrice) || 0;
-    const formattedPhone = formatDisplayPhone(whatsappNumber);
+    const formattedPhone = formatDisplayPhone(whatsappNumber.trim());
 
-    // Save and sync supplier info permanently
+    // Permanently remember supplier info
     saveSupplierApi(supplierName.trim(), supplierCity.trim(), whatsappNumber.trim());
+    try {
+      localStorage.setItem('dababi3_saved_store', supplierName.trim());
+      localStorage.setItem('dababi3_saved_city', supplierCity.trim());
+      localStorage.setItem('dababi3_saved_phone', whatsappNumber.trim());
+      localStorage.setItem(
+        'dababi3_supplier_profile',
+        JSON.stringify({
+          storeName: supplierName.trim(),
+          name: supplierName.trim(),
+          city: supplierCity.trim(),
+          phone: whatsappNumber.trim(),
+        })
+      );
+    } catch {}
+
     if (userSession && onUpdateSession) {
       onUpdateSession({
         ...userSession,
@@ -140,9 +248,14 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
       });
     }
 
+    // Default placeholder image if none uploaded
+    const defaultPlaceholder = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+    const allImages = images.length > 0 ? images : [defaultPlaceholder];
+    const mainImg = allImages[0];
+
     const newProduct: Product = {
       id: `prod-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      name: productName.trim() || 'سلعة جديدة',
+      name: productName.trim() || 'سلعة معروضة',
       category: selectedCategory,
       categoryLabel: categoryLabel,
       price: priceNum,
@@ -150,8 +263,9 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
       supplierName: supplierName.trim() || 'متجر المورد',
       supplierCity: supplierCity.trim() || 'المغرب',
       whatsappNumber: formattedPhone,
-      description: productDesc.trim() || 'سلعة معروضة للطلب المباشر عبر واتساب.',
-      imageUrl: imageUrl,
+      description: productDesc.trim() || 'سلعة معروضة للطلب المباشر عبر واتساب بدون وساطة وبدون عمولة.',
+      imageUrl: mainImg,
+      images: allImages,
       verified: true,
       createdAt: new Date().toISOString(),
       stockStatus: 'available',
@@ -162,36 +276,44 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
     setLastAddedName(newProduct.name);
     setShowSuccessToast(true);
 
-    // Reset product specific fields only, KEEPING supplierName, supplierCity, whatsappNumber completely intact!
+    // Reset product fields ONLY — Keep personal supplier data completely remembered!
     setProductName('');
     setProductPrice('');
     setProductDesc('');
+    setImages([]);
+    setPreviewActiveImgIdx(0);
 
     setTimeout(() => {
       setShowSuccessToast(false);
     }, 6000);
   };
 
+  // Preview photos list
+  const currentPreviewImages = images.length > 0
+    ? images
+    : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'];
+  const displayPreviewImg = currentPreviewImages[previewActiveImgIdx] || currentPreviewImages[0];
+
   return (
-    <div className="w-full max-w-[1280px] mx-auto px-4 md:px-8 py-6 flex flex-col gap-6 font-fluid" dir="rtl">
+    <div className="w-full max-w-[1280px] mx-auto px-4 md:px-8 py-6 flex flex-col gap-6 font-fluid" dir={language === 'fr' ? 'ltr' : 'rtl'}>
       {/* Header strictly DABABI3 with portal subtitle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2.5 flex-wrap">
             <Logo size="lg" />
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-indigo-500/15 border border-emerald-300 text-emerald-950">
-              بوابة الموردين والمشترين
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-indigo-500/15 border border-emerald-300 text-emerald-950 dark:text-emerald-300">
+              {t.portalSubtitle}
             </span>
-            <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">
-              إضافة سلعة
+            <span className="text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full">
+              {t.addProduct}
             </span>
           </div>
-          <p className="text-xs text-slate-500">
-            معلومات متجرك وهاتفك مسجلة ومحفوظة مسبقاً في الخانات — فقط أدخل تفاصيل السلعة واضغط نشر!
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t.savedAutomatically} — أدخل تفاصيل سلعتك وارفع أكثر من صورة واضغط نشر!
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 self-start sm:self-auto">
+        <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 self-start sm:self-auto">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>تخزين سحابي مشترك 0% عمولة</span>
         </div>
@@ -203,14 +325,14 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
         <div className="lg:col-span-7 flex flex-col gap-4">
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-5 bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-sm"
+            className="flex flex-col gap-5 bg-white dark:bg-slate-900 p-5 sm:p-7 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors"
           >
             {/* 1. قسم بيانات المتجر والهاتف (المعلومات مسجلة مسبقاً في الخانات) */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-300 flex flex-col gap-3">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/80 border border-emerald-300 dark:border-emerald-700/60 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
-                  <Store className="w-4 h-4 text-emerald-700" />
-                  <span>معلومات المورد والمتجر (مسجلة تلقائياً من حسابك):</span>
+                <span className="font-bold text-xs text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                  <Store className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                  <span>معلومات المورد والمتجر (مسجلة ومحفوظة بحسابك):</span>
                 </span>
                 <span className="text-[10px] bg-emerald-700 text-white font-bold px-2 py-0.5 rounded-full">
                   ✓ مسجلة وجاهزة
@@ -220,37 +342,40 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
               {/* الخانات مسجلة ومملوءة بالبيانات مسبقاً */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">
-                    اسم المتجر / الورشة (مسجل تلقائياً)
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    {t.storeName} *
                   </label>
                   <input
                     type="text"
                     required
                     value={supplierName}
-                    onChange={(e) => setSupplierName(e.target.value)}
-                    placeholder="اسم المتجر"
-                    className="h-11 px-3.5 rounded-xl bg-white border border-emerald-300 text-slate-900 text-xs font-bold outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-xs"
+                    onChange={(e) => handleStoreNameChange(e.target.value)}
+                    placeholder="اسم متجرك الخاص"
+                    className="h-11 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-600 text-slate-900 dark:text-white text-xs font-bold outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-xs"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">
-                    المدينة (مسجلة تلقائياً)
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    {t.city} *
                   </label>
-                  <input
-                    type="text"
-                    required
+                  <select
                     value={supplierCity}
-                    onChange={(e) => setSupplierCity(e.target.value)}
-                    placeholder="المدينة"
-                    className="h-11 px-3.5 rounded-xl bg-white border border-emerald-300 text-slate-900 text-xs font-bold outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-xs"
-                  />
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    className="h-11 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-600 text-slate-900 dark:text-white text-xs font-bold outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-xs cursor-pointer"
+                  >
+                    {MOROCCAN_CITIES.filter((c) => c !== 'الكل').map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-700">
-                  رقم هاتف الواتساب للمورد (مسجل تلقائياً لتلقي الطلبات)
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  {t.whatsappPhone} *
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute right-3 text-xs text-slate-500 font-mono font-bold" dir="ltr">
@@ -260,19 +385,19 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                     type="tel"
                     required
                     value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="6 XX XX XX XX"
-                    className="h-11 w-full pr-20 pl-3 rounded-xl bg-white border border-emerald-300 text-slate-900 text-xs font-mono font-bold outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-xs"
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="06XXXXXXXX"
+                    className="h-11 w-full pr-20 pl-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-600 text-slate-900 dark:text-white text-xs font-mono font-bold outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-xs"
                   />
                 </div>
               </div>
             </div>
 
             {/* 2. قسم بيانات السلعة المراد إضافتها */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-1.5">
                 <Plus className="w-4 h-4 text-emerald-600" />
-                <h2 className="font-bold text-base text-slate-900">بيانات السلعة</h2>
+                <h2 className="font-bold text-base text-slate-900 dark:text-white">بيانات السلعة</h2>
               </div>
               <span className="text-[11px] text-slate-400">تظهر للجميع بنفس الرابط</span>
             </div>
@@ -280,19 +405,23 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
             {/* اسم السلعة والثمن */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2 flex flex-col gap-1">
-                <label className="text-xs font-bold text-slate-700">اسم السلعة المعروضة *</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {t.productName} *
+                </label>
                 <input
                   type="text"
                   required
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  placeholder="مثال: حقيبة سفر جلدية أصيلة"
-                  className="h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none transition-all"
+                  placeholder="مثال: حقيبة سفر جلد طبيعي أصيل"
+                  className="h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-600 outline-none transition-all"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-slate-700">ثمن البيع (درهم) *</label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {t.productPrice} *
+                </label>
                 <div className="relative">
                   <input
                     type="number"
@@ -301,197 +430,313 @@ export const SupplierAddView: React.FC<SupplierAddViewProps> = ({
                     value={productPrice}
                     onChange={(e) => setProductPrice(e.target.value)}
                     placeholder="350"
-                    className="h-11 w-full pl-10 pr-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-display font-bold text-sm focus:bg-white focus:border-emerald-600 outline-none transition-all"
+                    className="h-11 w-full pl-10 pr-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-display font-bold text-sm focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-600 outline-none transition-all"
                   />
                   <span className="absolute left-3 top-3 text-[10px] font-bold text-slate-400">
-                    د.م.
+                    {t.currency}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* الفئة / التصنيف */}
+            {/* الفئات بأزرار ملونة */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">الفئة / التصنيف</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {categoryOptions.map((opt) => {
-                  const isSelected = selectedCategory === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCategory(opt.id);
-                        setCategoryLabel(opt.label);
-                      }}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
-                        isSelected
-                          ? `bg-gradient-to-r ${opt.color} text-white border-transparent shadow-sm scale-[1.02]`
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* وصف السلعة */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-700">وصف مختصر للسلعة</label>
-              <textarea
-                rows={2}
-                value={productDesc}
-                onChange={(e) => setProductDesc(e.target.value)}
-                placeholder="أذكر الجودة، الأبعاد، الألوان، أو شروط التوصيل..."
-                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none resize-none leading-relaxed"
-              />
-            </div>
-
-            {/* صورة السلعة */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700">صورة السلعة الحقيقية</label>
-                <button
-                  type="button"
-                  onClick={() => setShowUrlInput(!showUrlInput)}
-                  className="text-[11px] text-emerald-700 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                >
-                  <LinkIcon className="w-3 h-3" />
-                  <span>{showUrlInput ? 'إلغاء الرابط' : 'إدخال رابط مباشر'}</span>
-                </button>
-              </div>
-
-              {showUrlInput && (
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="h-10 px-3 rounded-xl border border-slate-200 text-xs font-mono text-left focus:border-emerald-600 outline-none"
-                  dir="ltr"
-                />
-              )}
-
-              <label className="bg-slate-50 hover:bg-slate-100 border-2 border-dashed border-slate-200 hover:border-emerald-600 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors">
-                <Upload className="w-6 h-6 text-slate-400 mb-1" />
-                <span className="text-xs font-bold text-slate-700">اضغط لاختيار صورة السلعة أو اسحبها هنا</span>
-                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {t.productCategory} *
               </label>
-
-              {/* Ready Preset Thumbnails */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
-                {PRESET_IMAGES.map((preset, idx) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {categoryOptions.map((opt) => (
                   <button
-                    key={idx}
+                    key={opt.id}
                     type="button"
-                    onClick={() => setImageUrl(preset.url)}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap border transition-all cursor-pointer ${
-                      imageUrl === preset.url
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    onClick={() => {
+                      setSelectedCategory(opt.id);
+                      setCategoryLabel(opt.label);
+                    }}
+                    className={`p-2.5 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
+                      selectedCategory === opt.id
+                        ? `bg-gradient-to-r ${opt.color} text-white border-transparent shadow-sm scale-[1.01]`
+                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
                     }`}
                   >
-                    {preset.label}
+                    {opt.label}
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* 3. إدخال أكثر من صورة منتج (الميزة المطلوبة بدقة) */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-emerald-600" />
+                  <span>{t.productImages}</span>
+                </label>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
+                  {images.length > 0 ? `${images.length} صور مضافة` : 'يمكنك رفع أكثر من صورة'}
+                </span>
+              </div>
+
+              {/* Upload area with multiple files support */}
+              <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center bg-slate-50/70 dark:bg-slate-800/40 transition-colors relative cursor-pointer group">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleMultipleFiles}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                />
+                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-600 flex items-center justify-center mb-2 shadow-xs group-hover:scale-110 transition-transform">
+                  <Upload className="w-6 h-6" />
+                </div>
+                <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                  {t.uploadImages}
+                </span>
+                <span className="text-[11px] text-slate-400 mt-1">
+                  اختر عدة صور من هاتفك دفعة واحدة (JPEG, PNG, WebP)
+                </span>
+              </div>
+
+              {/* Thumbnails of added images with primary selector and delete */}
+              {images.length > 0 && (
+                <div className="flex flex-col gap-2 mt-1 p-3 rounded-2xl bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                    الصور المرفوعة (اضغط على أي صورة لجعلها الرئيسية):
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {images.map((img, idx) => {
+                      const isPrimary = idx === 0;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleSetPrimary(idx)}
+                          className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer group transition-all ${
+                            isPrimary
+                              ? 'border-emerald-600 ring-2 ring-emerald-500/40 shadow-md'
+                              : 'border-white dark:border-slate-700 hover:border-emerald-300'
+                          }`}
+                        >
+                          <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+
+                          {isPrimary ? (
+                            <span className="absolute top-1 right-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                              {t.primaryPhoto}
+                            </span>
+                          ) : (
+                            <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 bg-slate-900/80 text-white text-[8px] px-1 py-0.5 rounded transition-opacity">
+                              رئيسية؟
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(idx);
+                            }}
+                            className="absolute top-1 left-1 p-1 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            title="حذف هذه الصورة"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* URL Direct Add Button */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  <span>{showUrlInput ? 'إخفاء خانة الرابط' : t.orEnterUrl}</span>
+                </button>
+              </div>
+
+              {showUrlInput && (
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    className="flex-1 h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddDirectUrl}
+                    className="px-4 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    {t.addImageUrl}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* الوصف */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {t.productDesc}
+              </label>
+              <textarea
+                rows={3}
+                value={productDesc}
+                onChange={(e) => setProductDesc(e.target.value)}
+                placeholder="اكتب وصفاً جذاباً للسلعة، القياسات، الجودة، شروط التوصيل..."
+                className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-600 outline-none transition-all resize-none"
+              />
+            </div>
+
             {/* زر النشر الفوري */}
             <button
               type="submit"
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-emerald-950/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
+              className="w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/20 active:scale-[0.99] transition-all cursor-pointer mt-2"
             >
-              <Rocket className="w-4 h-4" />
-              <span>نشر السلعة فوراً على DABABI3 لجميع الزوار</span>
+              <Rocket className="w-5 h-5" />
+              <span>{t.publishProduct}</span>
             </button>
           </form>
+
+          {/* إشعار النجاح */}
+          {showSuccessToast && (
+            <div className="p-4 rounded-2xl bg-emerald-600 text-white flex items-center justify-between gap-3 shadow-lg animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <div className="text-xs">
+                  <span className="font-bold block">تم نشر سلعة "{lastAddedName}" بنجاح!</span>
+                  <span>أصبحت معروضة الآن لجميع الزوار على نفس رابط الموقع.</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate('browse-products')}
+                className="px-3 py-1.5 rounded-xl bg-white text-emerald-900 text-xs font-bold shrink-0 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                مشاهدة في المتجر
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Live Preview Side (معاينة حية كما يراها الزبون) */}
-        <div className="lg:col-span-5 flex flex-col gap-3 sticky top-24">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
-              <Eye className="w-4 h-4 text-emerald-600" />
-              <span>معاينة حية للسلعة</span>
-            </div>
-            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-              مباشر للزبائن
+        {/* Live Preview Side (Sticky) with interactive multiple photos preview */}
+        <div className="lg:col-span-5 flex flex-col gap-3 lg:sticky lg:top-24">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-emerald-600" />
+              <span>معاينة حية لشكل السلعة في المتجر:</span>
+            </span>
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+              تحديث فوري
             </span>
           </div>
 
-          <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-slate-200 flex flex-col">
-            <div className="relative w-full aspect-square bg-slate-100 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md transition-colors flex flex-col">
+            {/* Image box with carousel navigation if multiple photos */}
+            <div className="relative w-full aspect-[4/3] bg-slate-100 dark:bg-slate-800 overflow-hidden group">
               <img
-                src={imageUrl}
-                alt={productName || 'معاينة السلعة'}
-                className="w-full h-full object-cover"
+                src={displayPreviewImg}
+                alt="معاينة"
+                className="w-full h-full object-cover transition-transform duration-300"
               />
-              <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-sm flex items-center gap-1 text-[11px] font-bold text-emerald-800">
+
+              {/* Prev / Next photo controls */}
+              {currentPreviewImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewActiveImgIdx((prev) =>
+                        prev === 0 ? currentPreviewImages.length - 1 : prev - 1
+                      )
+                    }
+                    className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-sm cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewActiveImgIdx((prev) =>
+                        prev === currentPreviewImages.length - 1 ? 0 : prev + 1
+                      )
+                    }
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-sm cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  {/* Photo indicators */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-900/60 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                    {currentPreviewImages.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          i === previewActiveImgIdx ? 'bg-white' : 'bg-white/40'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <span className="absolute top-2 left-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg backdrop-blur-sm">
+                    {previewActiveImgIdx + 1}/{currentPreviewImages.length}
+                  </span>
+                </>
+              )}
+
+              <div className="absolute top-3 right-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-xl text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1 shadow-sm">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{supplierCity}</span>
+                <span>{t.supplierVerified}</span>
               </div>
-              <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-md text-white px-2.5 py-0.5 rounded-lg text-[10px] font-medium">
+
+              <div className="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm">
                 {categoryLabel}
               </div>
             </div>
 
             <div className="p-4 flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500">
-                    {supplierName}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-emerald-600" />
+                  <span>{supplierCity || 'المدينة'} • {supplierName || 'اسم المتجر'}</span>
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display font-black text-xl text-emerald-800 dark:text-emerald-400">
+                    {productPrice ? parseFloat(productPrice).toLocaleString('fr-FR') : '0'}
                   </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display font-black text-xl text-emerald-800">
-                      {productPrice || '0'}
-                    </span>
-                    <span className="text-xs font-bold text-emerald-700">د.م.</span>
-                  </div>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{t.currency}</span>
                 </div>
-
-                <h3 className="font-bold text-sm text-slate-900 leading-tight">
-                  {productName || 'اسم السلعة المعروضة'}
-                </h3>
-
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                  {productDesc || 'وصف السلعة كما يظهر للمشترين عبر المنصة.'}
-                </p>
               </div>
 
-              {/* WhatsApp Button Preview */}
-              <div className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl flex items-center justify-center gap-2 font-bold text-xs shadow-md">
-                <MessageCircle className="w-4 h-4 fill-current" />
-                <span>اطلب عبر واتساب المورد</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-lg bg-black/20 font-mono" dir="ltr">
-                  {whatsappNumber ? `+212 ${whatsappNumber}` : 'مباشرة'}
-                </span>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">
+                {productName || 'اسم السلعة المعروضة'}
+              </h3>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                {productDesc || 'وصف السلعة...'}
+              </p>
+
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span>{t.supplierWhatsApp}</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200" dir="ltr">
+                    {whatsappNumber || '06XXXXXXXX'}
+                  </span>
+                </div>
+
+                <div className="w-full h-10 bg-emerald-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 opacity-90">
+                  <MessageCircle className="w-4 h-4 fill-current" />
+                  <span>{t.orderOnWhatsApp}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Success Notification Bar */}
-      {showSuccessToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce max-w-lg w-[90%] sm:w-auto">
-          <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
-            <Check className="w-4 h-4 stroke-[3]" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold">تم نشر "{lastAddedName || 'سلعتك'}" وحفظها في الموقع!</span>
-            <span className="text-[10px] text-slate-400">ستظهر لأي زائر يدخل إلى رابط الموقع فوراً.</span>
-          </div>
-          <button
-            onClick={() => onNavigate('browse-products')}
-            className="px-3 py-1 bg-emerald-500 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-600 transition-colors mr-auto shrink-0 cursor-pointer"
-          >
-            مشاهدة في المتجر
-          </button>
-        </div>
-      )}
     </div>
   );
 };

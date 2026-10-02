@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { UserSession } from './AuthScreen';
 import { saveSupplierApi } from '../utils/api';
+import { Language } from '../types';
+import { getTranslation } from '../utils/translations';
 import {
   X,
   Settings,
@@ -27,7 +29,7 @@ interface SettingsModalProps {
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: (dark: boolean) => void;
-  language: string;
+  language: Language;
   onSelectLanguage: (lang: string) => void;
 }
 
@@ -42,9 +44,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   language,
   onSelectLanguage,
 }) => {
+  const t = getTranslation(language);
   const [storeName, setStoreName] = useState(userSession?.storeName || userSession?.name || '');
   const [phone, setPhone] = useState(userSession?.phone || '');
-  const [city, setCity] = useState(userSession?.city || 'فاس');
+  const [city, setCity] = useState(userSession?.city || 'الدار البيضاء');
   const [role, setRole] = useState<'buyer' | 'supplier'>(userSession?.role || 'supplier');
   const [whatsappTemplate, setWhatsappTemplate] = useState('مرحباً، أرغب في طلب هذه السلعة عبر منصة DABABI3');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -54,7 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (userSession) {
       setStoreName(userSession.storeName || userSession.name || '');
       setPhone(userSession.phone || '');
-      setCity(userSession.city || 'فاس');
+      setCity(userSession.city || 'الدار البيضاء');
       setRole(userSession.role || 'supplier');
     }
   }, [userSession]);
@@ -75,6 +78,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     onUpdateSession(updated);
+    try {
+      localStorage.setItem('dababi3_saved_store', storeName.trim());
+      localStorage.setItem('dababi3_saved_phone', phone.trim());
+      localStorage.setItem('dababi3_saved_city', city.trim());
+      localStorage.setItem('dababi3_supplier_profile', JSON.stringify(updated));
+    } catch {}
+
     saveSupplierApi(storeName.trim(), city.trim(), phone.trim());
 
     setSavedSuccess(true);
@@ -82,31 +92,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn font-fluid" dir="rtl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn font-fluid"
+      dir={language === 'fr' ? 'ltr' : 'rtl'}
+    >
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className={`relative w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl z-10 max-h-[90vh] flex flex-col border transition-colors ${
-        isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-      }`}>
+      <div
+        className={`relative w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl z-10 max-h-[90vh] flex flex-col border transition-colors ${
+          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+        }`}
+      >
         {/* Header */}
-        <div className={`p-5 border-b flex items-center justify-between ${
-          isDarkMode ? 'border-slate-800 bg-slate-900/90' : 'border-slate-100 bg-slate-50/80'
-        }`}>
+        <div
+          className={`p-5 border-b flex items-center justify-between ${
+            isDarkMode ? 'border-slate-800 bg-slate-900/90' : 'border-slate-100 bg-slate-50/80'
+          }`}
+        >
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-sm">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base">إعدادات الحساب والموقع</h2>
+              <h2 className="font-bold text-base">{t.settings} - DABABI3</h2>
               <span className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                تخصيص الحساب، المظهر، واللغة في DABABI3
+                {language === 'fr'
+                  ? 'Personnalisation du compte, thème et langue'
+                  : 'تخصيص الحساب، المظهر، واللغة في DABABI3'}
               </span>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
               isDarkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-200 text-slate-500'
             }`}
           >
@@ -121,24 +140,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600">
                 <Store className="w-4 h-4" />
-                <span>معلومات الحساب والمتجر (تُحفظ تلقائياً)</span>
+                <span>{language === 'fr' ? 'Informations du magasin (sauvegardées)' : 'معلومات الحساب والمتجر (تُحفظ تلقائياً)'}</span>
               </span>
               <span className="text-[10px] text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">
-                تطبق على كل سلعة
+                {t.savedAutomatically}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className={`text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  اسم المتجر / البائع
+                  {t.storeName}
                 </label>
                 <input
                   type="text"
                   required
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="مثال: ورشة الأطلس"
+                  placeholder="اسم المتجر"
                   className={`h-11 px-3.5 rounded-xl border text-xs outline-none focus:border-emerald-600 transition-all ${
                     isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
@@ -147,14 +166,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div className="flex flex-col gap-1">
                 <label className={`text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  المدينة
+                  {t.city}
                 </label>
                 <input
                   type="text"
                   required
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="مثال: فاس، الدار البيضاء"
+                  placeholder="المدينة"
                   className={`h-11 px-3.5 rounded-xl border text-xs outline-none focus:border-emerald-600 transition-all ${
                     isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
@@ -164,10 +183,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <div className="flex flex-col gap-1">
               <label className={`text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                رقم هاتف الواتساب لتلقي طلبات الزبائن
+                {t.whatsappPhone}
               </label>
               <div className="relative flex items-center">
-                <span className="absolute right-3 text-xs text-slate-400 font-mono" dir="ltr">
+                <span className="absolute right-3 text-xs text-slate-400 font-mono font-bold" dir="ltr">
                   🇲🇦 +212
                 </span>
                 <input
@@ -175,7 +194,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="6 XX XX XX XX"
+                  placeholder="06XXXXXXXX"
                   className={`h-11 w-full pr-20 pl-3 rounded-xl border text-xs font-mono font-bold outline-none focus:border-emerald-600 transition-all ${
                     isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                   }`}
@@ -190,10 +209,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {savedSuccess ? (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>تم حفظ وتحديث بيانات المتجر بنجاح!</span>
+                  <span>{language === 'fr' ? 'Informations enregistrées avec succès !' : 'تم حفظ وتحديث بيانات المتجر بنجاح!'}</span>
                 </>
               ) : (
-                <span>حفظ بيانات المتجر في النظام</span>
+                <span>{language === 'fr' ? 'Enregistrer les informations' : 'حفظ بيانات المتجر في النظام'}</span>
               )}
             </button>
           </form>
@@ -202,7 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex flex-col gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
             <span className="font-bold text-xs flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
               <Sun className="w-4 h-4" />
-              <span>المظهر (الوضع المضيء / الوضع المظلم)</span>
+              <span>{language === 'fr' ? 'Thème d’affichage' : 'المظهر (الوضع المضيء / الوضع المظلم)'}</span>
             </span>
 
             <div className="grid grid-cols-2 gap-2">
@@ -216,7 +235,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <Sun className="w-4 h-4 text-amber-500" />
-                <span>الوضع المضيء (نهاري)</span>
+                <span>{t.lightMode}</span>
               </button>
 
               <button
@@ -229,7 +248,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <Moon className="w-4 h-4 text-indigo-400" />
-                <span>الوضع المظلم (ليلي)</span>
+                <span>{t.darkMode}</span>
               </button>
             </div>
           </div>
@@ -238,7 +257,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex flex-col gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
             <span className="font-bold text-xs flex items-center gap-1.5 text-teal-600 dark:text-teal-400">
               <Globe className="w-4 h-4" />
-              <span>لغة الموقع (Language)</span>
+              <span>{t.language} (Language)</span>
             </span>
 
             <div className="grid grid-cols-3 gap-2">
@@ -253,7 +272,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => onSelectLanguage(lang.id)}
                   className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     language === lang.id
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-600 dark:text-emerald-200 shadow-sm'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-600 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
                       : isDarkMode
                       ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
                       : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -270,7 +289,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex flex-col gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
             <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600">
               <MessageSquare className="w-4 h-4" />
-              <span>صيغة رسالة الواتساب الجاهزة</span>
+              <span>{language === 'fr' ? 'Modèle de message WhatsApp' : 'صيغة رسالة الواتساب الجاهزة'}</span>
             </span>
             <input
               type="text"
@@ -281,11 +300,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }`}
             />
             <span className="text-[10px] text-slate-400">
-              يتم إرسال هذا النص تلقائياً عند ضغط الزبون على زر واتساب أسفل منتجك.
+              {language === 'fr'
+                ? 'Ce texte est envoyé automatiquement quand un client clique sur commander via WhatsApp.'
+                : 'يتم إرسال هذا النص تلقائياً عند ضغط الزبون على زر واتساب أسفل منتجك.'}
             </span>
           </div>
 
-          {/* 5. Account Logout & Danger zone */}
+          {/* 5. Account Logout */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <button
               type="button"
@@ -296,11 +317,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>تسجيل الخروج من الحساب</span>
+              <span>{t.logout}</span>
             </button>
 
             <span className="text-[10px] text-slate-400">
-              DABABI3 v2.4
+              DABABI3 v2.5
             </span>
           </div>
         </div>

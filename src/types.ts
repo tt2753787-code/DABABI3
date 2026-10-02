@@ -9,6 +9,8 @@ export interface Category {
   activeBg: string;
 }
 
+export type Language = 'ar' | 'darija' | 'fr';
+
 export interface Product {
   id: string;
   name: string;
@@ -21,6 +23,7 @@ export interface Product {
   whatsappNumber: string;
   description: string;
   imageUrl: string;
+  images?: string[];
   verified: boolean;
   featured?: boolean;
   createdAt: string;
@@ -28,4 +31,4 @@ export interface Product {
   unit?: string;
 }
 
-export type ViewMode = 'browse-products' | 'supplier-add-product' | 'about-dababi3';
+export type ViewMode = 'browse-products' | 'supplier-add-product' | 'pages' | 'about-dababi3';

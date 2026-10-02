@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Product, ViewMode } from './types';
+import { Product, ViewMode, Language } from './types';
 import { INITIAL_PRODUCTS } from './data/initialProducts';
 import {
   fetchProductsApi,
@@ -22,6 +22,7 @@ import { FavoritesModal } from './components/FavoritesModal';
 import { AuthScreen, UserSession } from './components/AuthScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { EditProductModal } from './components/EditProductModal';
+import { PagesModal } from './components/PagesModal';
 
 export default function App() {
   // Authentication session - Login page shown first before entering
@@ -39,13 +40,13 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState<ViewMode>('browse-products');
 
-  // Load products from shared server storage with fallback to initial catalog
+  // Load products from shared server storage (empty initial, real user products only)
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('dababi3_products');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -55,7 +56,7 @@ export default function App() {
     return INITIAL_PRODUCTS;
   });
 
-  // Load favorites
+  // Load favorites (no demo ids)
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('dababi3_favorites');
@@ -65,7 +66,7 @@ export default function App() {
     } catch {
       // ignore
     }
-    return ['prod-1', 'prod-3'];
+    return [];
   });
 
   // Modals state
@@ -73,6 +74,7 @@ export default function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPagesOpen, setIsPagesOpen] = useState(false);
 
   // Settings State: Dark Mode & Language
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -83,12 +85,14 @@ export default function App() {
     }
   });
 
-  const [language, setLanguage] = useState<string>(() => {
+  const [language, setLanguage] = useState<Language>(() => {
     try {
-      return localStorage.getItem('dababi3_lang') || 'ar';
-    } catch {
-      return 'ar';
-    }
+      const saved = localStorage.getItem('dababi3_lang');
+      if (saved === 'ar' || saved === 'darija' || saved === 'fr') {
+        return saved as Language;
+      }
+    } catch {}
+    return 'ar';
   });
 
   // Dark mode effect on HTML
@@ -103,18 +107,21 @@ export default function App() {
     } catch {}
   }, [isDarkMode]);
 
-  // Language persistence
+  // Language persistence and dir attribute update
   const handleSelectLanguage = (lang: string) => {
-    setLanguage(lang);
+    const l = lang as Language;
+    setLanguage(l);
     try {
-      localStorage.setItem('dababi3_lang', lang);
+      localStorage.setItem('dababi3_lang', l);
     } catch {}
+    document.documentElement.dir = l === 'fr' ? 'ltr' : 'rtl';
+    document.documentElement.lang = l === 'fr' ? 'fr' : 'ar';
   };
 
   // Sync shared products from server
   const syncProductsFromServer = useCallback(async () => {
     const list = await fetchProductsApi();
-    if (list && list.length > 0) {
+    if (list) {
       setProducts(list);
     }
   }, []);
@@ -211,9 +218,9 @@ export default function App() {
       className={`min-h-screen flex flex-col font-fluid antialiased transition-colors ${
         isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#f9f9f7] text-slate-900'
       }`}
-      dir="rtl"
+      dir={language === 'fr' ? 'ltr' : 'rtl'}
     >
-      {/* Top Header strictly DABABI3 */}
+      {/* Top Header strictly DABABI3 with Pages replacing Add Product */}
       <Header
         currentView={currentView}
         onNavigate={handleNavigate}
@@ -222,6 +229,8 @@ export default function App() {
         userSession={userSession}
         onLogout={handleLogout}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenPages={() => setIsPagesOpen(true)}
+        language={language}
       />
 
       {/* Main Screen Content */}
@@ -236,6 +245,7 @@ export default function App() {
             userSession={userSession}
             onEditProduct={(p) => setEditingProduct(p)}
             onDeleteProduct={handleDeleteProduct}
+            language={language}
           />
         )}
 
@@ -245,11 +255,12 @@ export default function App() {
             onNavigate={handleNavigate}
             userSession={userSession}
             onUpdateSession={handleUpdateSession}
+            language={language}
           />
         )}
 
         {currentView === 'about-dababi3' && (
-          <AboutView onNavigate={handleNavigate} />
+          <AboutView onNavigate={handleNavigate} language={language} />
         )}
       </main>
 
@@ -259,6 +270,8 @@ export default function App() {
         onClose={() => setSelectedProduct(null)}
         isFavorite={selectedProduct ? favorites.includes(selectedProduct.id) : false}
         onToggleFavorite={handleToggleFavorite}
+        language={language}
+        isDarkMode={isDarkMode}
       />
 
       {/* Edit Product Modal (accessed from 3-dots menu on product) */}
@@ -268,6 +281,7 @@ export default function App() {
         onClose={() => setEditingProduct(null)}
         onSave={handleSaveEditedProduct}
         isDarkMode={isDarkMode}
+        language={language}
       />
 
       {/* Settings Modal (Language, Account Info, Dark/Light Mode) */}
@@ -283,6 +297,14 @@ export default function App() {
         onSelectLanguage={handleSelectLanguage}
       />
 
+      {/* Pages Modal (Privacy Policy, Terms, Charter, Delivery, FAQ) */}
+      <PagesModal
+        isOpen={isPagesOpen}
+        onClose={() => setIsPagesOpen(false)}
+        language={language}
+        isDarkMode={isDarkMode}
+      />
+
       {/* Favorites Drawer/Modal */}
       <FavoritesModal
         isOpen={isFavoritesOpen}
@@ -291,10 +313,16 @@ export default function App() {
         products={products}
         onToggleFavorite={handleToggleFavorite}
         onSelectProduct={(p) => setSelectedProduct(p)}
+        language={language}
+        isDarkMode={isDarkMode}
       />
 
       {/* Persistent Footer strictly DABABI3 */}
-      <Footer onNavigate={handleNavigate} />
+      <Footer
+        onNavigate={handleNavigate}
+        onOpenPages={() => setIsPagesOpen(true)}
+        language={language}
+      />
     </div>
   );
 }

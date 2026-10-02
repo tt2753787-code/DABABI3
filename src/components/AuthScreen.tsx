@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import { LogIn, Sparkles, User, Store, ShieldCheck, ArrowLeft, Phone, Lock, Eye, EyeOff, MapPin } from 'lucide-react';
+import { MOROCCAN_CITIES } from '../data/initialProducts';
 
 export interface UserSession {
   name: string;
@@ -23,10 +24,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [name, setName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
-  const [city, setCity] = useState('فاس');
+  const [city, setCity] = useState('الدار البيضاء');
   const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // Load saved profile on mount
+  // Load saved profile on mount from localStorage
   useEffect(() => {
     try {
       const savedProfile = localStorage.getItem('dababi3_supplier_profile');
@@ -37,6 +39,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         if (parsed.phone) setPhone(parsed.phone);
         if (parsed.city) setCity(parsed.city);
       }
+      const savedPhone = localStorage.getItem('dababi3_saved_phone');
+      if (savedPhone && !phone) setPhone(savedPhone);
+      const savedStore = localStorage.getItem('dababi3_saved_store');
+      if (savedStore && !storeName) setStoreName(savedStore);
+      const savedCity = localStorage.getItem('dababi3_saved_city');
+      if (savedCity && !city) setCity(savedCity);
     } catch {
       // ignore
     }
@@ -44,43 +52,52 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalStoreName = storeName.trim() || name.trim() || 'متجر المورد';
-    const finalPhone = phone.trim() || '0661849201';
-    const finalCity = city || 'فاس';
+    setErrorMsg('');
+
+    const cleanedPhone = phone.trim();
+    if (!cleanedPhone) {
+      setErrorMsg('المرجوا إدخال رقم هاتف الواتساب للمتابعة');
+      return;
+    }
+
+    const finalStoreName = storeName.trim() || name.trim() || 'متجري';
+    const finalCity = city || 'الدار البيضاء';
 
     const session: UserSession = {
       name: role === 'supplier' ? finalStoreName : (name.trim() || 'مشتري'),
       storeName: finalStoreName,
-      phone: finalPhone,
+      phone: cleanedPhone,
       role,
       city: finalCity,
     };
 
-    // Persist supplier credentials for future logins
-    if (role === 'supplier') {
-      try {
-        localStorage.setItem(
-          'dababi3_supplier_profile',
-          JSON.stringify({
-            storeName: finalStoreName,
-            name: name.trim() || finalStoreName,
-            phone: finalPhone,
-            city: finalCity,
-          })
-        );
-      } catch {
-        // ignore
-      }
+    // Persist supplier credentials permanently for all future logins and forms
+    try {
+      localStorage.setItem('dababi3_session', JSON.stringify(session));
+      localStorage.setItem(
+        'dababi3_supplier_profile',
+        JSON.stringify({
+          storeName: finalStoreName,
+          name: name.trim() || finalStoreName,
+          phone: cleanedPhone,
+          city: finalCity,
+        })
+      );
+      localStorage.setItem('dababi3_saved_phone', cleanedPhone);
+      localStorage.setItem('dababi3_saved_store', finalStoreName);
+      localStorage.setItem('dababi3_saved_city', finalCity);
+    } catch {
+      // ignore
     }
 
     onLogin(session);
   };
 
   const handleQuickLogin = (selectedRole: 'buyer' | 'supplier') => {
-    // Check if supplier profile already saved
-    let profileStore = 'ورشة الأطلس للصناعات';
-    let profilePhone = '0667889900';
-    let profileCity = 'فاس';
+    // Check if user has previously saved details
+    let profileStore = storeName || '';
+    let profilePhone = phone || '';
+    let profileCity = city || 'الدار البيضاء';
 
     try {
       const saved = localStorage.getItem('dababi3_supplier_profile');
@@ -90,24 +107,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         if (parsed.phone) profilePhone = parsed.phone;
         if (parsed.city) profileCity = parsed.city;
       }
+      const p = localStorage.getItem('dababi3_saved_phone');
+      if (p) profilePhone = p;
     } catch {
       // ignore
+    }
+
+    if (!profilePhone) {
+      profilePhone = '0600000000';
+    }
+    if (!profileStore) {
+      profileStore = 'متجري';
     }
 
     const session: UserSession = {
       name: selectedRole === 'supplier' ? profileStore : 'مشتري معتمد',
       storeName: profileStore,
-      phone: selectedRole === 'supplier' ? profilePhone : '0678901234',
+      phone: profilePhone,
       role: selectedRole,
-      city: selectedRole === 'supplier' ? profileCity : 'الدار البيضاء',
+      city: profileCity,
     };
+
+    try {
+      localStorage.setItem('dababi3_session', JSON.stringify(session));
+      if (selectedRole === 'supplier') {
+        localStorage.setItem('dababi3_supplier_profile', JSON.stringify(session));
+      }
+    } catch {}
 
     onLogin(session);
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#f9f9f7] relative overflow-hidden font-fluid" dir="rtl">
-      {/* Mixed vibrant atmospheric color blobs */}
+      {/* Vibrant atmospheric color blobs */}
       <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-gradient-to-br from-emerald-400/25 to-teal-400/20 blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 -left-28 w-80 h-80 rounded-full bg-gradient-to-tr from-amber-400/20 to-orange-400/20 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 right-1/4 w-80 h-80 rounded-full bg-gradient-to-tr from-indigo-400/20 to-purple-400/20 blur-3xl pointer-events-none" />
@@ -122,9 +155,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </span>
           </div>
           <p className="text-xs font-semibold text-slate-500">
-            {isRegister ? 'أنشئ حسابك وسيحفظ النظام بيانات متجرك تلقائياً' : 'سجل الدخول للمتابعة إلى المنصة'}
+            {isRegister ? 'أنشئ حسابك وسيحفظ النظام بيانات متجرك ورقمك تلقائياً' : 'سجل الدخول لمعاينة ونشر السلع'}
           </p>
         </div>
+
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold text-center">
+            {errorMsg}
+          </div>
+        )}
 
         {/* Tab Switcher */}
         <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl">
@@ -197,8 +236,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 required
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
-                placeholder="مثال: ورشة الأطلس للصناعات"
-                className="h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none transition-all"
+                placeholder="اسم متجرك الخاص"
+                className="h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none transition-all font-bold"
               />
             </div>
           )}
@@ -213,7 +252,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={role === 'supplier' ? 'مثال: يوسف التازي' : 'مثال: كريم العلمي'}
+                placeholder={role === 'supplier' ? 'اسمك الشخصي' : 'الاسم الكامل'}
                 className="h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none transition-all"
               />
             </div>
@@ -226,7 +265,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
               <span className="text-[10px] text-emerald-700 font-semibold">دائم</span>
             </label>
             <div className="relative flex items-center">
-              <span className="absolute right-3 text-xs text-slate-500 font-mono" dir="ltr">
+              <span className="absolute right-3 text-xs text-slate-500 font-mono font-bold" dir="ltr">
                 🇲🇦 +212
               </span>
               <input
@@ -234,7 +273,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="6 XX XX XX XX"
+                placeholder="06XXXXXXXX"
                 className="h-11 w-full pr-20 pl-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono font-bold focus:bg-white focus:border-emerald-600 outline-none transition-all"
               />
             </div>
@@ -249,83 +288,81 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             <select
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="h-11 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:bg-white focus:border-emerald-600 outline-none"
+              className="h-11 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:bg-white focus:border-emerald-600 outline-none transition-all cursor-pointer"
             >
-              <option value="فاس">فاس</option>
-              <option value="الدار البيضاء">الدار البيضاء</option>
-              <option value="الرباط">الرباط</option>
-              <option value="مراكش">مراكش</option>
-              <option value="طنجة">طنجة</option>
-              <option value="أكادير">أكادير</option>
-              <option value="قلعة السراغنة">قلعة السراغنة</option>
-              <option value="مكناس">مكناس</option>
-              <option value="وجدة">وجدة</option>
-              <option value="تطوان">تطوان</option>
-              <option value="خنيفرة">خنيفرة</option>
-              <option value="آسفي">آسفي</option>
+              {MOROCCAN_CITIES.filter((c) => c !== 'الكل').map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Password */}
+          {/* Password (optional/dummy for smooth UX) */}
           <div className="flex flex-col gap-1">
             <label className="text-[11px] font-bold text-slate-700">كلمة المرور</label>
             <div className="relative flex items-center">
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="h-11 w-full px-3.5 pl-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none transition-all"
+                className="h-11 w-full pl-10 pr-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-emerald-600 outline-none transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute left-3 text-slate-400 hover:text-slate-600"
+                className="absolute left-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Submit CTA */}
+          {/* Submit Button */}
           <button
             type="submit"
-            className="h-12 mt-1 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-emerald-950/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full h-11 mt-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 active:scale-[0.99] transition-all cursor-pointer"
           >
             <LogIn className="w-4 h-4" />
-            <span>{isRegister ? 'تسجيل الحساب والدخول' : 'دخول إلى DABABI3'}</span>
+            <span>{isRegister ? 'إنشاء الحساب والدخول فوراً' : 'تسجيل الدخول'}</span>
           </button>
         </form>
 
-        {/* Quick test login */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
-          <span className="text-[10px] text-center text-slate-400 font-medium">
-            أو دخول فوري بضغطة واحدة:
-          </span>
+        {/* Quick Instant Test Access */}
+        <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 text-center">
+          <span className="text-[11px] font-semibold text-slate-400">أو دخول سريع للتجربة:</span>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => handleQuickLogin('supplier')}
-              className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-200 text-amber-950 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Store className="w-3.5 h-3.5 text-amber-600" />
-              <span>دخول كمورد</span>
+              <span>دخول سريع كمورد</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickLogin('buyer')}
-              className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-200 text-emerald-950 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-emerald-600" />
-              <span>دخول كزبون</span>
+              <span>دخول سريع كزبون</span>
             </button>
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-1 text-[11px] text-slate-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>تواصل مباشر عبر واتساب 0% عمولة</span>
+        {/* Footer features notice */}
+        <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400">
+          <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>0% عمولة</span>
+          </span>
+          <span>•</span>
+          <span className="flex items-center gap-1 text-teal-700 font-semibold">
+            <Phone className="w-3 h-3 text-teal-600" />
+            <span>تواصل مباشر فـ واتساب</span>
+          </span>
         </div>
       </div>
     </div>

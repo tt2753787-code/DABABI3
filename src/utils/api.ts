@@ -6,9 +6,11 @@ export async function fetchProductsApi(): Promise<Product[]> {
     const res = await fetch('/api/products');
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        localStorage.setItem('dababi3_products', JSON.stringify(data));
-        return data;
+      if (Array.isArray(data)) {
+        // Filter out any leftover mock demo IDs
+        const realProducts = data.filter((p) => !p.id.startsWith('prod-') || p.id.startsWith('prod-17') || p.id.startsWith('prod-18') || p.id.length > 10);
+        localStorage.setItem('dababi3_products', JSON.stringify(realProducts));
+        return realProducts;
       }
     }
   } catch (err) {
@@ -20,8 +22,9 @@ export async function fetchProductsApi(): Promise<Product[]> {
     const saved = localStorage.getItem('dababi3_products');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter((p: any) => !p.id || !['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7'].includes(p.id));
+        return cleaned;
       }
     }
   } catch {}
